@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const dbConnect = require("./dbConnect");
 const authRouter = require("./routers/authRouter");
+const postRouter = require("./routers/postRouter");
 const morgan = require("morgan");
 
 dotenv.config("./.env");
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use(morgan("common"));
 
 app.use("/auth", authRouter);
+app.use("/posts", postRouter);
 app.get("/", (req, res) => {
   res.status(200).send("OK from server");
 });
