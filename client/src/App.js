@@ -1,7 +1,12 @@
+import Login from "./pages/login/Login";
+import { Routes, Route } from "react-router-dom";
+
 function App() {
   return (
-    <div>
-      <h1>vinay</h1>
+    <div className="App">
+      <Routes>
+        <Route path="/login" element={<Login />} />
+      </Routes>
     </div>
   );
 }
