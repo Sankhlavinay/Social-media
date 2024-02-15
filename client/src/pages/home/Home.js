@@ -6,8 +6,6 @@ function Home() {
 
   async function fetchData() {
     const response = await axiosClient.get("/posts/all");
-
-    console.log("get  the response");
   }
 
   return <div>Home</div>;

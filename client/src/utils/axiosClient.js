@@ -41,7 +41,11 @@ axiosClient.interceptors.response.use(async (response) => {
 
   if (statusCode === 401 && !originalRequest._retry) {
     originalRequest._retry = true;
-    const response = await axiosClient.get("/auth/refresh");
+    const response = await axios
+      .create({
+        withCredentials: true,
+      })
+      .get(`${process.env.REACT_APP_SERVER_BASE_URL}/auth/refresh`);
 
     console.log("response from backend", response);
 
