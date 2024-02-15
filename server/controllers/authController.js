@@ -5,9 +5,9 @@ const { error, success } = require("../utils/responseWrapper.js");
 
 const signupController = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !name) {
       // return res.status(400).send("All fields are required");
       return res.send(error(400, "All fields are required"));
     }
@@ -21,20 +21,14 @@ const signupController = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
+      name,
       email,
       password: hashedPassword,
     });
 
-    // return res.status(201).json({
-    //   user,
-    // });
-    return res.send(
-      success(201, {
-        user,
-      })
-    );
-  } catch (error) {
-    console.log(error);
+    return res.send(success(201, "User Created Successfully"));
+  } catch (e) {
+    return res.send(error(500, e.message));
   }
 };
 
@@ -47,7 +41,7 @@ const loginController = async (req, res) => {
       return res.send(error(400, "All fields are required"));
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       // return res.status(404).send("User is not exist");
       return res.send(error(404, "User is not exist"));
@@ -74,8 +68,8 @@ const loginController = async (req, res) => {
 
     // return res.json({ accessToken });
     return res.send(success(200, { accessToken }));
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    return res.send(error(500, e.message));
   }
 };
 
@@ -112,7 +106,7 @@ const refreshAccessTokenController = async (req, res) => {
 const generateAccessToken = (data) => {
   try {
     const token = jwt.sign(data, process.env.ACCESS_TOKEN_PRIVATE_KEY, {
-      expiresIn: "15m",
+      expiresIn: "1d",
     });
     console.log(token);
     return token;
