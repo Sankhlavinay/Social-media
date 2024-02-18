@@ -77,7 +77,6 @@ const loginController = async (req, res) => {
 const refreshAccessTokenController = async (req, res) => {
   const cookies = req.cookies;
   if (!cookies.jwt) {
-    // return res.status(401).send("Refresh token in cookie required");
     return res.send(error(401, "Refresh token in cookie required"));
   }
 
@@ -92,12 +91,22 @@ const refreshAccessTokenController = async (req, res) => {
     const _id = decoded._id;
     const accessToken = generateAccessToken({ _id });
 
-    // return res.status(201).json({ accessToken });
     return res.send(success(201, { accessToken }));
   } catch (e) {
     console.log(e);
-    // return res.status(401).send(" Invalid Refresh token ");
     return res.send(error(401, "Invalid Refresh token"));
+  }
+};
+
+const logoutController = async (req, res) => {
+  try {
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: true,
+    });
+    return res.send(success(200, "User logged Out"));
+  } catch (e) {
+    return res.send(error(500, e.message));
   }
 };
 
@@ -131,4 +140,5 @@ module.exports = {
   signupController,
   loginController,
   refreshAccessTokenController,
+  logoutController,
 };

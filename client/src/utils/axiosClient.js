@@ -23,21 +23,11 @@ axiosClient.interceptors.response.use(async (response) => {
   if (data.status === "ok") {
     return data;
   }
+  console.log(data);
 
   const originalRequest = response.config;
   const statusCode = data.statusCode;
-  const error = data.error;
-
-  if (
-    // when refresh token expires, send user to login page
-    statusCode === 401 &&
-    originalRequest.url ===
-      `${process.env.REACT_APP_SERVER_BASE_URL}/auth/refresh`
-  ) {
-    removeItem(KEY_ACCESS_TOKEN);
-    window.location.replace("/login", "_self");
-    return Promise.reject(error);
-  }
+  const error = data.message;
 
   if (statusCode === 401 && !originalRequest._retry) {
     originalRequest._retry = true;
@@ -56,6 +46,10 @@ axiosClient.interceptors.response.use(async (response) => {
       ] = `Bearer ${response.result.accessToken}`;
 
       return axios(originalRequest);
+    } else {
+      removeItem(KEY_ACCESS_TOKEN);
+      window.location.replace("/login", "_self");
+      return Promise.reject(error);
     }
   }
 
