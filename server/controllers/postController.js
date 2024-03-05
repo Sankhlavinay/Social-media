@@ -1,29 +1,40 @@
 const Post = require("../models/Post");
 const User = require("../models/User");
+const { mapPostOutput } = require("../utils/Utils");
 const { success, error } = require("../utils/responseWrapper");
+const cloudinary = require("cloudinary").v2;
 
 const createPostController = async (req, res) => {
   try {
-    const { caption } = req.body;
-    const owner = req._id;
+    const { caption, postImg } = req.body;
 
-    if (!caption) {
-      return res.send(error(400, "Caption is Required"));
+    if (!caption || !postImg) {
+      return res.send(error(400, "Caption and post img are Required"));
     }
+
+    const cloudImg = await cloudinary.uploader.upload(postImg, {
+      folder: "postImg",
+    });
+
+    const owner = req._id;
 
     const user = await User.findById(req._id);
 
     const post = await Post.create({
       owner,
       caption,
+      image: {
+        publicId: cloudImg.public_id,
+        url: cloudImg.url,
+      },
     });
 
     user.posts.push(post._id);
     await user.save();
 
-    return res.send(success(201, post));
+    return res.json(success(200, { post }));
   } catch (e) {
-    res.send(error(500, e.message));
+    return res.send(error(500, e.message));
   }
 };
 
@@ -32,7 +43,7 @@ const likeAndUnlikePost = async (req, res) => {
     const { postId } = req.body;
     const curUserId = req._id;
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).popolate("owner");
     if (!post) {
       return res.send(error(404, "Post not found"));
     }
@@ -40,14 +51,11 @@ const likeAndUnlikePost = async (req, res) => {
     if (post.likes.includes(curUserId)) {
       const index = post.likes.indexOf(curUserId);
       post.likes.splice(index, 1);
-
-      await post.save();
-      return res.send(success(200, "Post Unliked"));
     } else {
       post.likes.push(curUserId);
-      await post.save();
-      return res.send(success(200, "Post Liked"));
     }
+    await post.save();
+    return res.send(success(200, { post: mapPostOutput(post, req._id) }));
   } catch (e) {
     return res.send(error(500, e.message));
   }

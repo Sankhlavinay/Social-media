@@ -1,6 +1,8 @@
+const { json } = require("express");
 const Post = require("../models/Post");
 const User = require("../models/User");
 const { success, error } = require("../utils/responseWrapper");
+const { mapPostOutput } = require("../utils/Utils");
 const cloudinary = require("cloudinary").v2;
 
 const followOrUnfollowUserController = async (req, res) => {
@@ -26,45 +28,54 @@ const followOrUnfollowUserController = async (req, res) => {
 
       const followerIndex = userToFollow.followers.indexOf(curUser);
       userToFollow.followers.splice(followerIndex, 1);
-
-      await userToFollow.save();
-      await curUser.save();
-
-      return res.send(success(200, "User Unfollowed"));
     } else {
       userToFollow.followers.push(curUserId);
       curUser.followings.push(userIdToFollow);
-
-      await userToFollow.save();
-      await curUser.save();
-
-      return res.send(success(200, "User Followed"));
     }
+
+    await userToFollow.save();
+    await curUser.save();
+
+    return res.send(success(200, { user: userToFollow }));
   } catch (e) {
     console.log(e);
     return res.send(error(500, e.message));
   }
 };
 
-const getPostsOfFOllowing = async (req, res) => {
+const getPostsOfFollowing = async (req, res) => {
   try {
     const curUserId = req._id;
 
-    const curUser = await User.findById(curUserId);
+    const curUser = await User.findById(curUserId).populate("followings");
 
-    const posts = await Post.find({
+    const fullPosts = await Post.find({
       owner: {
         $in: curUser.followings,
       },
+    }).populate("owner");
+
+    const posts = fullPosts
+      .map((item) => mapPostOutput(item, req._id))
+      .reverse();
+
+    // curUser.posts = posts;
+    const followingsIds = curUser.followings.map((item) => item._id);
+    followingsIds.push(req._id);
+
+    const suggestions = await User.find({
+      _id: {
+        $nin: followingsIds,
+      },
     });
 
-    return res.send(success(200, posts));
+    return res.send(success(200, { ...cusUser._doc, suggestions, posts }));
   } catch (e) {
     return res.send(error(500, e.message));
   }
 };
 
-const getMyPost = async (req, res) => {
+const getMyPosts = async (req, res) => {
   try {
     const curUserId = req._id;
     const allUserPosts = await Post.find({
@@ -76,9 +87,9 @@ const getMyPost = async (req, res) => {
   }
 };
 
-const getUserPost = async (req, res) => {
+const getUserPosts = async (req, res) => {
   try {
-    const userId = req._id;
+    const userId = req.body.userId;
 
     if (!userId) {
       return res.send(error(400, "User id Required"));
@@ -110,12 +121,12 @@ const deleteMyProfile = async (req, res) => {
       const index = follower.followings.indexOf(curUserId);
 
       follower.followings.splice(index, 1);
-      follower.save();
+      await follower.save();
     });
 
     //Remove Myself from followings followers
     curUser.followings.forEach(async (followingId) => {
-      const following = await User.findOneAndUpdate(followingId);
+      const following = await User.findById(followingId);
       const index = following.followers.indexOf(curUserId);
       following.followers.splice(index, 1);
       await following.save();
@@ -166,7 +177,7 @@ const updateUserProfile = async (req, res) => {
       user.bio = bio;
     }
     if (userImg) {
-      const clouding = await cloudinary.uploader.upload(userImg, {
+      const cloudImg = await cloudinary.uploader.upload(userImg, {
         folder: "profileImg",
       });
       user.avatar = {
@@ -181,12 +192,34 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    const user = await User.findById(userId).populate({
+      path: "posts",
+      populate: {
+        path: "owner",
+      },
+    });
+
+    const fullPosts = user.posts;
+    const posts = fullPosts
+      .map((item) => mapPostPOutput(item, req._id))
+      .reverse();
+
+    return res.send(success(200, { ...user._doc, posts }));
+  } catch (e) {
+    return res.send(error(500, e.message));
+  }
+};
+
 module.exports = {
   followOrUnfollowUserController,
-  getPostsOfFOllowing,
-  getMyPost,
-  getUserPost,
+  getPostsOfFollowing,
+  getMyPosts,
+  getUserPosts,
   deleteMyProfile,
   getMyInfo,
   updateUserProfile,
+  getUserProfile,
 };

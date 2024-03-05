@@ -5,11 +5,20 @@ import Avatar from "../avatar/Avatar";
 import { AiOutlineLogout } from "react-icons/ai";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "../../redux/slices/appConfigSlice";
+import { axiosClient } from "../../utils/axiosClient";
+import { KEY_ACCESS_TOKEN, removeItem } from "../../utils/localStorageManager";
 function Navbar() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const myProfile = useSelector((state) => state.appConfigReducer.myProfile);
 
-  function handledLogoutClicked() {}
+  async function handledLogoutClicked() {
+    try {
+      await axiosClient.post("/auth/logout");
+      removeItem(KEY_ACCESS_TOKEN);
+      navigate("/login");
+    } catch (e) {}
+  }
   console.log(myProfile);
   return (
     <div className="Navbar">
